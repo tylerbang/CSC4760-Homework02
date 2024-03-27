@@ -29,10 +29,10 @@ int main(int argc, char* argv[]) {
   });
   Kokkos::fence();
   double time_user_copy = timer.seconds();
-  
+
   // Output times 
-  cout << "Time for deep_copy: " << time_deep_copy << endl;
-  cout << "Time for user copy: " << time_user_copy << endl;
+  printf("Time for deep_copy: %f\n", time_deep_copy);
+  printf("Time for user copy: %f\n", time_user_copy);
   }
   Kokkos::finalize();
 }
