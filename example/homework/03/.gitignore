@@ -1,0 +1,12 @@
+# ignore object files
+*.o
+
+# others to ignore
+*.hpp
+*.a
+*.tmp
+*.h
+*.host
+
+# ignore directory
+desul/
