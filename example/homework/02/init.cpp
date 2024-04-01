@@ -1,20 +1,28 @@
 using namespace std;
 #include <mpi.h>
 #include <iostream>
-#include <assert.h>
 #include <bits/stdc++.h>
+#include <cstdlib>
+#include <ctime>
 
+// haha funni comment
+
+// this is main function
 int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv);
+    
+    // get that rank and size
     
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+    // variables for the number of rows, columns, and time steps
     int nRows;
     int nCols;
     int nTime;
 
+    // Check the number of arguments
     if (rank == 0) {
         if (argc != 4) {
             cout << "Usage: mpirun -n <number of processes> ./init <nRows> <nCols> <nTime>" << endl;
@@ -29,21 +37,26 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Broadcast the number of rows, columns, and time steps
     MPI_Bcast(&nRows, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&nCols, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&nTime, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+    // Check if the number of rows is divisible by the number of processes
     int nRowsLocal = nRows / size;
     if (rank == (size-1)){
        nRowsLocal += nRows % size; 
     }
 
+    // Initialize the domain
     int nRowsLocalWithGhost = nRowsLocal + 2;
     int nColsWithGhost = nCols + 2;
 
     vector<vector<int>> currDomain(nRowsLocalWithGhost, vector<int>(nColsWithGhost, 0));
     vector<vector<int>> nextDomain(nRowsLocalWithGhost, vector<int>(nColsWithGhost, 0));
 
+    // fill the domain with random values
+    srand(time(0));
     for (int iRow = 1; iRow <= nRowsLocal; iRow++){
         for (int iCol = 1; iCol <= nColsWithGhost; iCol++){
             currDomain[iRow][iCol] = rand() % 2;
@@ -56,6 +69,7 @@ int main(int argc, char* argv[]) {
     const int ALIVE = 1;
     const int DEAD = 0;
     
+    // Main loop
     for (int iTime = 0; iTime < nTime; iTime++){
         MPI_Send(&currDomain[1][0], nColsWithGhost, MPI_INT, upperNeighbor, 0, MPI_COMM_WORLD);
         MPI_Send(&currDomain[nRowsLocal][0], nColsWithGhost, MPI_INT, lowerNeighbor, 0, MPI_COMM_WORLD);
@@ -71,12 +85,11 @@ int main(int argc, char* argv[]) {
         if (rank != 0){
             for (int iRow = 1; iRow <= nRowsLocal; iRow++){
                 MPI_Send(&currDomain[iRow][1], nCols, MPI_INT, 0, 0, MPI_COMM_WORLD);
-
             }
         }
 
         if (rank == 0){
-            cout << "iTime: " << iTime << "------------" << endl;
+            cout << "iTime: " << iTime << endl;
 
             for (int iRow = 1; iRow <= nRowsLocal; iRow++){
                 for (int iCol = 1; iCol <= nCols; iCol++){
@@ -99,33 +112,23 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-
+        
+                // Update the next domain
         for (int iRow = 1; iRow <= nRowsLocal; iRow++){
             for (int iCol = 1; iCol <= nCols; iCol++){
-                
                 int nAliveNeighbors = 0;
-
-                for (int jRow = iRow - 1; jRow <= iRow + 1; jRow++){
-                    for (int jCol = iCol - 1; jCol <= iCol + 1; jCol++){
-                        if ((jRow != iRow) || (jCol != iCol) && currDomain[jRow][jCol] == ALIVE){
+                for (int jRow = max(1, iRow - 1); jRow <= min(nRowsLocal, iRow + 1); jRow++){
+                    for (int jCol = max(1, iCol - 1); jCol <= min(nCols, iCol + 1); jCol++){
+                        if (((jRow != iRow) || (jCol != iCol)) && currDomain[jRow][jCol] == ALIVE){
                             nAliveNeighbors++;
                         }
                     }
                 }
 
-                if (nAliveNeighbors < 2){
-                    nextDomain[iRow][iCol] = DEAD;
-                }
-                if (currDomain[iRow][iCol] == ALIVE && (nAliveNeighbors == 2 || nAliveNeighbors == 3)){
-                    nextDomain[iRow][iCol] = ALIVE;
-                }
-
-                if (nAliveNeighbors > 3){
-                    nextDomain[iRow][iCol] = DEAD;
-                }
-
-                if (currDomain[iRow][iCol] == DEAD && nAliveNeighbors == 3){
-                    nextDomain[iRow][iCol] = ALIVE;
+                if (currDomain[iRow][iCol] == ALIVE){
+                   nextDomain[iRow][iCol] = (nAliveNeighbors == 2 || nAliveNeighbors == 3) ? ALIVE : DEAD;
+                } else {
+                     nextDomain[iRow][iCol] = (nAliveNeighbors == 3) ? ALIVE : DEAD;
                 }
             }
         }
@@ -139,3 +142,20 @@ int main(int argc, char* argv[]) {
     MPI_Finalize();    
     return 0;
 }
+/*
+⢰⣶⠶⢶⣶⣶⡶⢶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⡶⠶⢶⣶⣶⣶⣶
+⠘⠄⠄⠄⠄⠄⠄⠄⠄⣿⣿⣿⣿⣿⣿⣿⠿⠄⠄⠄⠈⠉⠄⠄⣹⣶⣿⣿⣿⣿⢿
+⠄⠤⣾⣿⣿⣿⣿⣷⣤⡈⠙⠛⣿⣿⣿⣧⣀⠠⣤⣤⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣶
+⢠⠄⠄⣀⣀⣀⣭⣿⣿⣿⣶⣿⣿⣿⣿⣿⣿⣤⣿⣿⠉⠉⠉⢉⣉⡉⠉⠉⠙⠛⠛
+⢸⣿⡀⠄⠈⣹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠿⠿⢿⣿⣿⣷⣾⣿
+⢸⣿⣿⣿⣿⣿⣿⣿⣿⠛⢩⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⢸⣿⣿⣿⣿⣿⡿⣿⣿⣴⣿⣿⣿⣿⣄⣠⣴⣿⣷⣭⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⠸⠿⣿⣿⣿⠋⣴⡟⠋⠈⠻⠿⠿⠛⠛⠛⠛⠛⠃⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⢸⣿⣿⣿⡁⠈⠉⠄⠄⠄⠄⠄⣤⡄⠄⠄⠄⠄⠄⠈⠄⠈⠻⠿⠛⢿⣿⣿⣿⣿⣿
+⢸⣿⣿⣿⠄⠄⠄⠄⠄⠄⠄⠄⣠⣄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⢀⣀⣿⣿⣿⣿
+⢸⣿⣿⣿⡀⠄⠄⠄⠄⠄⠄⠄⠉⠉⠁⠄⠄⠄⠄⠐⠒⠒⠄⠄⠄⠄⠉⢸⣿⣿⣿
+⢸⣿⣿⣿⢿⣦⣄⣠⣄⠛⠟⠃⣀⣀⡀⠄⠄⣀⣀⣀⣀⣀⣀⡀⢀⣰⣦⣼⣿⣿⡿
+⢸⣿⣿⣿⣿⣿⣿⣻⣿⠄⢰⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⢛⣥⣾⣟⣿⣿⣿⣿⣿
+⢸⣿⣿⣿⣿⣿⣿⣿⣿⡆⠈⠿⠿⠿⠿⠿⠿⠿⠿⠿⣧⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+*/
