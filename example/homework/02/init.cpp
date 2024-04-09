@@ -22,6 +22,15 @@ int main(int argc, char* argv[]) {
     int nCols;
     int nTime;
 
+    // let's just say that you run it like this:
+    // mpirun -np 4 ./init [nRows] [nCols] [nTime (or just iterations, you get the point)]
+    // so we need to check if the number of arguments is correct
+    // if it's not, we just abort the program
+
+    // preferably, you want to run this on a heckin cluster with them sweet sweet nodes
+
+    // also, I know you said to use * for alive and space for dead, but I'm just gonna use 1 and 0 because I'm lazy
+
     // Check the number of arguments
     if (rank == 0) {
         if (argc != 4) {
@@ -48,10 +57,11 @@ int main(int argc, char* argv[]) {
        nRowsLocal += nRows % size; 
     }
 
-    // Initialize the domain
+    // the ghost cells are the cells that are on the edge of the domain
     int nRowsLocalWithGhost = nRowsLocal + 2;
     int nColsWithGhost = nCols + 2;
 
+    // Initialize the domain
     vector<vector<int>> currDomain(nRowsLocalWithGhost, vector<int>(nColsWithGhost, 0));
     vector<vector<int>> nextDomain(nRowsLocalWithGhost, vector<int>(nColsWithGhost, 0));
 
@@ -63,6 +73,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Initialize the neighbors
     int upperNeighbor = (rank == 0) ? size - 1 : rank - 1;
     int lowerNeighbor = (rank == size - 1) ? 0 : rank + 1;
     
@@ -143,6 +154,9 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 /*
+
+KEKW
+
 ⢰⣶⠶⢶⣶⣶⡶⢶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⡶⠶⢶⣶⣶⣶⣶
 ⠘⠄⠄⠄⠄⠄⠄⠄⠄⣿⣿⣿⣿⣿⣿⣿⠿⠄⠄⠄⠈⠉⠄⠄⣹⣶⣿⣿⣿⣿⢿
 ⠄⠤⣾⣿⣿⣿⣿⣷⣤⡈⠙⠛⣿⣿⣿⣧⣀⠠⣤⣤⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣶
